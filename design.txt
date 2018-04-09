@@ -1,0 +1,116 @@
+Backend Coding Challenge
+
+        Using Django framework
+        Implement a service that exposes APIs for:
+          {creation, modification, and retrieval}
+        of hotel reservation data.
+
+Django application must expose APIs.
+THIS MEANS: You can access and change an application by calling web pages.
+  (In this case, localhost.app.)
+
+Web pages are:
+  REQUIRED Get reservation information (Log Reservation.Status)
+  REQUIRED Create reservation
+  REQUIRED Modify reservation
+  Sign up / in (Purpose: It'll autofill your info)
+  Signed out
+  Restaurant index/search page
+    Include "New to this site? Login and it'll autofill" notification redirecting to signup
+    Include "You're logged in!" notification after first login, then display their name
+    Maybe include list of favorites if you're logged in
+
+        Think about a minimal set of fields that are needed
+          to represent the reservation data
+          (guest name, dates, etc),
+            make them required
+          when data is added to the system
+          using the API.
+
+Upon new object creation, all Reservation object fields are required.
+Write down how you're storing your objects for the Github README. Sqlite?
+Reservation {
+  REQUIRED  FirstName (str(15))
+  REQUIRED  LastName (str(15))
+  REQUIRED  PhoneNo (str(10)) <-- VALIDATE THIS!!! MUST BE PROPER FORMAT
+  REQUIRED  Date (datetime)
+  REQUIRED  GuestCount (small int)
+    Status (int) (enumeration {
+      0 = Upcoming reservation,
+      1 = Guest is here,
+      2 = Guest has left,
+      3 = Guest missed reservation
+    }) MAKE THESE TIME SENSITIVE. WEAVE A PYTEST ARRAY USING FREEZEGUN.FREEZETIME.
+
+    Not required: Email (str(30)) <-- VALIDATE THIS TOO! Not to the same extent as the first one though.
+    Not required: ReceiveEmailUpdates (bool=True)
+    Not required: ReceivePhoneCall (bool=True)
+    Not required: ReceiveTextNotification (bool=False)
+    Not required: Occasion (str(20))
+}
+
+Not required:
+  When searching for a new one, we'll want to display ratings, restaurant name,
+  stars, # reviews, booked how many times today, open time slots
+End not required
+
+        Reservation data
+        received using a dedicated API call
+        must expose information
+        about the state:
+          if it’s {
+            future reservation,
+            guest is in-house,
+            guest checked out}.
+
+"Get reservation information" view must tell you the state.
+Upcoming, guest is here, or guest left.
+Or guest never showed up, like a dingus.
+
+        Implement a rate limit
+        for state change requests.
+        For instance,
+        allowing only up to
+        1 request per minute
+        for the state change.
+        Data store choice is up to you,
+        but please explain it in the README file.
+
+You can only change your state once a minute!
+Or, doesn't have to be once a minute.
+It can be anything, just gotta be limited somehow.
+
+^Test for this! Maybe make it run on a cron or something.
+Hey, can I use celery for this? Not required, but That'd be the bomb!
+
+
+
+
+DOCUMENT HOW TO USE THIS THING!
+
+
+
+
+Socket out all API components into a settings file!
+You should be able to handle other APIs by plugging in their information! 
+
+HANDLE ALL EXCEPTION CASES! GO BACK AND ADD EXCEPTION HANDLING FOR EVERYTHING!
+
+Use secure API keys: Put them in your SETTINGS and validate requests using them.
+
+!!!!Extra challenge!
+!!!!Use Docker to test it and set it up!
+
+Now, put this on Github!
+In the README file:
+  Tell us how to run it,
+  and tell us how to test it.
+  Explain how you're storing data.
+	I'm storing data using a local database, in the db.sqlite3 file.
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+When you are done, send an email to  roman@keypr.com  (Roman Mazur)
+with a link to the repo.
+Include Philippe and Lauren when emailing Roman
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

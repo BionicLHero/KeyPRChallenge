@@ -1,0 +1,15 @@
+√ Exposes APIs
+√ Exposes for creation
+√ Exposes for modification
+√ Exposes for retrieval
+√ Require minimal set of fields for a reservation
+√ Expose state when you call the retrieve method
+√ Implement how states are changed
+√ Rate limit state-change requests, 1 change every minute per person
+Test everything
+
+Explain how data storage is working in README file
+Explain how to run it in README file
+Explain how to test it in README file
+Put it on GitHub
+Email the people with a link to the repo
