@@ -21,10 +21,10 @@ class ReservationTests(TestCase):
     def setup(self):
         self.client = Client()
         self.assertEqual(Reservation.objects.count(), 0)
-    
+
     def _create_reservation(self, data=default_data):
         return self.client.get('/create', data=data)
-    
+
     def _modify_reservation(self, id, **kwargs):
         args = ["{}={}".format(k, kwargs[k]) for k in kwargs]
         kwargs_str = "&".join(args)
@@ -41,7 +41,7 @@ class ReservationTests(TestCase):
 
     def _delete_reservation(self, id):
         return self.client.get('/{}/delete'.format(id))
-    
+
     def _change_status(self, id, status):
         return self.client.get('/{}/state/{}'.format(id, status))
 
@@ -61,7 +61,7 @@ class ReservationTests(TestCase):
         res = self._get_reservation(1)
         assert res.json()['id'] == 1
         assert res.json()['status'] == 'Upcoming reservation'
-    
+
     def test_object_status_retrieval_shows_only_status(self):
         self._create_reservation()
         res = self._get_reservation_status(1)
@@ -165,7 +165,7 @@ class ReservationTests(TestCase):
         data['phoneno'] = 12345678901
         res = self._create_reservation(data=data)
         assert res.json()['status'] == 'Upcoming reservation'
-    
+
     def test_datetime_validated_upon_reservation_creation(self):
         data = default_data.copy()
         data['datetime'] = '2018-08-08 24:12:12'
@@ -281,7 +281,7 @@ class ReservationTests(TestCase):
             'status': '-1', 'exception': "This hotel is booked at {}.".format(dt_1)}
         assert Reservation.objects.count() == 2
         assert Reservation.objects.first().datetime != Reservation.objects.last().datetime
-    
+
     def test_status_lastchanged_field_set_to_now_upon_new_reservation(self):
         res = self._create_reservation()
         assert res.json()['status_last_changed_at'][:20] == \
@@ -298,9 +298,6 @@ class ReservationTests(TestCase):
         with freezegun.freeze_time(datetime.datetime.now() + datetime.timedelta(minutes=2)):
             res = self._change_status(1, 2)
             self.assertEqual(res.json()['status'], 'Guest has left')
-        with freezegun.freeze_time(datetime.datetime.now() + datetime.timedelta(minutes=3)):
-            res = self._change_status(1, 3)
-            self.assertEqual(res.json()['status'], 'Guest missed reservation')
 
     def test_two_people_can_have_reservations_with_same_time_but_different_hotels(self):
         assert Reservation.objects.count() == 0
@@ -384,15 +381,4 @@ class ReservationTests(TestCase):
             assert self._get_reservation_status_string(1) == 'Guest has left'
             self._change_status(1, 2)
             assert self._get_reservation_status_string(1) == 'Guest has left'
-            assert str(Reservation.objects.first().status_last_changed_at)[:20] == old_last_changed.replace('T',' ')[:20]
-        with freezegun.freeze_time(datetime.datetime.now() + datetime.timedelta(minutes=6)):
-            res = self._change_status(1, 3)
-            assert self._get_reservation_status_string(1) == 'Guest missed reservation'
-            new_last_changed = res.json()['status_last_changed_at']
-            assert new_last_changed != old_last_changed
-            old_last_changed = new_last_changed
-        with freezegun.freeze_time(datetime.datetime.now() + datetime.timedelta(minutes=7)):
-            assert self._get_reservation_status_string(1) == 'Guest missed reservation'
-            self._change_status(1, 3)
-            assert self._get_reservation_status_string(1) == 'Guest missed reservation'
             assert str(Reservation.objects.first().status_last_changed_at)[:20] == old_last_changed.replace('T',' ')[:20]
