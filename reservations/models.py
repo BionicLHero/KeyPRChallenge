@@ -4,38 +4,10 @@ from __future__ import unicode_literals
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import BaseUserManager
+from django.core.validators import MaxValueValidator, MinValueValidator
 import datetime
 import pytz
 import dateutil.parser
-
-
-# REALLY wanting to put this into a larger class. If I was working with more
-# classes than just Reservation, I'd make a larger validator net.
-def validate_reservation(kwargs):
-    ''' Returns: (bool is_valid, dict errors) '''
-    is_valid = True
-    errors = {}
-    errors['datetime'] = []
-    try:
-        date = dateutil.parser.parse(str(kwargs['datetime']).replace('T',' '))
-        if date < datetime.datetime.now():
-            is_valid = False
-            errors['datetime'].append("You can't reserve a time in the past!")
-    except Exception as e:
-        is_valid = False
-        errors['datetime'].append("You must enter a valid date/time.")
-
-    errors['phoneno'] = []
-    try:
-        ph = int(kwargs['phoneno'])
-        if len(str(kwargs['phoneno'])) not in [10, 11]:
-            is_valid = False
-            errors['phoneno'].append("You must enter a valid phone number.")
-    except Exception as e:
-        is_valid = False
-        errors['phoneno'].append("You must enter a valid phone number.")
-
-    return is_valid, errors
 
 
 class Reservation(models.Model):
@@ -50,7 +22,7 @@ class Reservation(models.Model):
 
     firstname = models.CharField(max_length=15)
     lastname = models.CharField(max_length=15)
-    phoneno = models.IntegerField()
+    phoneno = models.IntegerField(validators = [MinValueValidator(1111111111), MaxValueValidator(99999999999)])
     datetime = models.DateTimeField()
     guestcount = models.SmallIntegerField()
     hotelname = models.CharField(max_length=30)

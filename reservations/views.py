@@ -5,13 +5,13 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
-from .models import Reservation, validate_reservation
+from .models import Reservation
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from . import serializers
-import datetime
+import datetime, dateutil
 import json
 
 
@@ -71,12 +71,10 @@ class ReservationModelViewSet(viewsets.ModelViewSet):
     def create(self, request):
         data = request.data.copy()
         data['status_last_changed_at'] = datetime.datetime.now()
-        is_valid, errors = validate_reservation(request.data)
-        if not is_valid:
-            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         serializer = serializers.ReservationSerializer(data = data)
         if serializer.is_valid():
-            name = serializer.data.get('firstname')
+            if dateutil.parser.parse(str(data['datetime'])) < datetime.datetime.now():
+                return Response({'datetime': ["You can't reserve a time in the past!"]}, status=status.HTTP_400_BAD_REQUEST)
             res = Reservation.objects.create(**serializer.data)
             return ReservationResponse(res)
         else:
@@ -102,11 +100,10 @@ class ReservationModelViewSet(viewsets.ModelViewSet):
             Serializer = serializers.ReservationSerializer
         del res_dict['_state']
         del res_dict['status']
-        is_valid, errors = validate_reservation(res_dict)
-        if not is_valid:
-            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         serializer = Serializer(data = res_dict)
         if serializer.is_valid():
+            if dateutil.parser.parse(str(res_dict['datetime'])) < datetime.datetime.now():
+                return Response({'datetime': ["You can't reserve a time in the past!"]}, status=status.HTTP_400_BAD_REQUEST)
             Reservation.objects.filter(id=pk).update(**res_dict)
             return ReservationResponse(Reservation.objects.get(id=pk))
         else:

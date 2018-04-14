@@ -6,7 +6,7 @@ from . import models
 class ExistingReservationSerializer(serializers.Serializer):
     firstname = serializers.CharField(max_length=15)
     lastname = serializers.CharField(max_length=15)
-    phoneno = serializers.IntegerField()
+    phoneno = serializers.IntegerField(min_value=1111111111, max_value=99999999999)
     datetime = serializers.DateTimeField()
     guestcount = serializers.IntegerField()
     hotelname = serializers.CharField(max_length=30)

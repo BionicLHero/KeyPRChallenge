@@ -145,13 +145,13 @@ class ReservationViewTests(TestCase):
         data = default_data.copy()
         data['phoneno'] = '227144084408'
         res = self._create_reservation(data=data)
-        assert res.data['phoneno'][0] == "You must enter a valid phone number."
+        assert res.data['phoneno'][0] == "Ensure this value is less than or equal to 99999999999."
         data['phoneno'] = 'afafaf'
         res = self._create_reservation(data=data)
-        assert res.data['phoneno'][0] == "You must enter a valid phone number."
+        assert res.data['phoneno'][0] == "A valid integer is required."
         data['phoneno'] = 123456789
         res = self._create_reservation(data=data)
-        assert res.data['phoneno'][0] == "You must enter a valid phone number."
+        assert res.data['phoneno'][0] == "Ensure this value is greater than or equal to 1111111111."
         data['phoneno'] = 12345678901
         res = self._create_reservation(data=data)
         assert res.data['status'] == 'Upcoming reservation'
