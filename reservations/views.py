@@ -44,9 +44,9 @@ class StatusChangeView(APIView):
 
 
 def ReservationResponse(reservation):
-    args2 = reservation.__dict__.copy()
-    del args2['_state']
-    return Response(args2)
+    args = reservation.__dict__.copy()
+    del args['_state']
+    return Response(args)
 
 
 class ReservationModelViewSet(viewsets.ModelViewSet):
@@ -87,17 +87,13 @@ class ReservationModelViewSet(viewsets.ModelViewSet):
         return self.partial_update(request, pk)
 
     def partial_update(self, request, pk=None):
-        res = Reservation.objects.get(id=pk)
-        res_dict = res.__dict__
-        change_date_or_location = False
+        res_dict = Reservation.objects.get(id=pk).__dict__
         Serializer = serializers.ExistingReservationSerializer
         for key, value in request.data.iteritems():
             if value == '': continue
             res_dict[key] = value
             if key in ['datetime','hotelname']:
-                change_date_or_location = True
-        if change_date_or_location:
-            Serializer = serializers.ReservationSerializer
+                Serializer = serializers.ReservationSerializer
         del res_dict['_state']
         del res_dict['status']
         serializer = Serializer(data = res_dict)
