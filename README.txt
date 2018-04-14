@@ -1,10 +1,10 @@
-You can use this API to create, read, update, and delete hotel reservation information,
-all from GET requests to your browser.
+You can use this REST API to create, read, update, and delete hotel reservation
+information.
 
 This project's data storage is in a sqlite3 file, attached with this project.
 
 In the Usage section: All URLs are relative URLs from localhost.
-Example (modifying reservation): localhost:8000/3/change?firstname=Jacob
+Example (changing status): localhost:8000/3/status-change
 
 You may have to run `./manage.py migrate` when setting up the project.
 
@@ -16,35 +16,38 @@ Testing:
 Usage:
 
     View all reservations:
-        `/`
+        `GET /`
         The reservations are modifiable through their IDs.
 
     Create reservation:
-        `/create?{{ PARAMETERS }}`
-        Where PARAMETERS is a querystring, with these required parameters:
-        firstname (string)
-        lastname (string)
-        phoneno (11-digit number)
-        datetime (in format YYYY-MM-DDThh:mm, example: 2019-01-01T08:30)
-        guestcount (int)
-        hotelname (string)
-        
-    Modify reservation:
-        `/{{ id }}/change?{{ param }}={{ value }}&{{ paramb }}={{ valueb }}...`
+        `POST /` (data=PARAMETERS)
+        Where PARAMETERS is a dict, with these REQUIRED parameters:
+        firstname: (string)
+        lastname: (string)
+        phoneno: (10-digit or 11-digit number)
+        datetime: (in format YYYY-MM-DDThh:mm, example: 2019-01-01T08:30)
+        guestcount: (int)
+        hotelname: (string)
 
     Get reservation information:
-        `/{{ id }}`
+        `GET /{{ id }}`
 
-    Get reservation status:
-        `/{{ id }}/status`
+    Modify reservation:
+        `PATCH /{{ id }}` (data=PARAMETERS)
+        Where PARAMETERS is a dict, with these OPTIONAL parameters:
+        firstname: (string)
+        lastname: (string)
+        phoneno: (10-digit or 11-digit number)
+        datetime: (in format YYYY-MM-DDThh:mm, example: 2019-01-01T08:30)
+        guestcount: (int)
+        hotelname: (string)
 
     Delete reservation:
-        `/{{ id }}/delete`
+        `DELETE /{{ id }}`
+
+    Check status:
+        `GET /{{ id }}/status-change`
 
     Change status:
-        `/{{ id }}/state/{{ status }}`
-        Where status is an int between 0 and 3.
-            0. Upcoming reservation,
-            1. Guest is here,
-            2. Guest has left,
-            3. Guest missed reservation.
+        `POST /{{ id }}/status-change`
+        This can only be called once every minute per reservation.

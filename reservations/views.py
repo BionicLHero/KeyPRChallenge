@@ -5,124 +5,113 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
-from .models import Reservation
+from .models import Reservation, validate_reservation
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from . import serializers
+import datetime
+import json
 
-class ReservationViewSet(viewsets.ViewSet):
-    serializer_class = serializers.ReservationSerializer
-    def list(self, request):
-        return Response({'message': 'List all reservations',
-                         'reservations': 'reservations'})
 
-    def create(self, request):
-        serializer = serializers.ReservationSerializer(data = request.data)
-        if serializer.is_valid():
-            name = serializer.data.get('firstname')
-            return Response({'message': 'Reservation made for {0}'.format(name)})
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def rate_limit(func):
+    def wrapped(obj, request, reservation_id):
+        res = Reservation.objects.get(id=reservation_id)
+        cutoff = res.status_last_changed_at + \
+            datetime.timedelta(minutes=1)
+        if (datetime.datetime.now() < cutoff):
+            return Response({'message': 'You can only change status once a minute. Last changed at: {0}'.format(
+                                         res.status_last_changed_at)})
+        res.status_last_changed_at = datetime.datetime.now()
+        res.save(update_fields=['status_last_changed_at'])
+        return func(obj, request, reservation_id)
+    return wrapped
 
-    def retrieve(self, request, pk=None):
-        return Response({'http_method': 'GET'})
 
-    def update(self, request, pk=None):
-        return Response({'http_method': 'PUT'})
+class StatusChangeView(APIView):
+    serializer_class = serializers.ChangeStatusSerializer
+    def get(self, request, reservation_id, format=None):
+        return Response({'message': 'Success',
+                         'status': Reservation.objects.get(id=reservation_id).status})
 
-    def partial_update(self, request, pk=None):
-        return Response({'http_method': 'PATCH'})
+    @rate_limit
+    def post(self, request, reservation_id):
+        res = Reservation.objects.get(id=reservation_id)
+        res.change_status()
+        res.refresh_from_db()
+        return ReservationResponse(Reservation.objects.get(id=reservation_id))
 
-    def destroy(self, request, pk=None):
-        return Response({'http_method': 'DELETE'})
+
+def ReservationResponse(reservation):
+    args2 = reservation.__dict__.copy()
+    del args2['_state']
+    return Response(args2)
 
 
 class ReservationModelViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ReservationCreationSerializer
     queryset = Reservation.objects.all()
 
-# def index(request):
-#     all_reservations = Reservation.objects.all()
-#     response = {}
-#     for i in Reservation.objects.all():
-#         response[i.pk] = _clean_res_dict(i)
-#     return JsonResponse(response)
-#
-#
-# def _clean_res_dict(res):
-#     res_dict = res.__dict__.copy()
-#     del res_dict['_state']
-#     return res_dict
-#
-#
-# def ReservationJsonResponse(res):
-#     return JsonResponse(_clean_res_dict(res))
-#
-#
-# def retrieve(request, reservation_id):
-#     return ReservationJsonResponse(Reservation.objects.get(id=reservation_id))
-#
-#
-# def retrieve_status(request, reservation_id):
-#     res = Reservation.objects.get(id=reservation_id)
-#     return JsonResponse({'status': res.status})
-#
-#
-# def modify(request, reservation_id):
-#     res = Reservation.objects.get(id=reservation_id)
-#     keys_to_update = []
-#     new_reservation = _clean_res_dict(res)
-#     for i in request.GET.keys():
-#         if i in settings.FIELDS_TO_IGNORE + ['status']:
-#             continue
-#         new_reservation[i] = request.GET[i]
-#         keys_to_update.append(i)
-#     # is_valid, err = Reservation.validate(new_reservation)
-#     # if not is_valid:
-#     #     return JsonResponse({'status': '-1', 'exception': err})
-#     if ('hotelname' in keys_to_update or 'datetime' in keys_to_update) \
-#         and Reservation.objects.filter(hotelname=new_reservation['hotelname'],
-#                                     datetime=new_reservation['datetime']).count() > 0:
-#             return JsonResponse({'status': '-1', 'exception': "This hotel is booked at {}.".format(new_reservation['datetime'])})
-#     for i in keys_to_update:
-#         setattr(res, i, new_reservation[i])
-#     res.save(update_fields=keys_to_update)
-#     return ReservationJsonResponse(res)
-#
-#
-# def delete(request, reservation_id):
-#     res = Reservation.objects.filter(id=reservation_id).delete()
-#     if res[0] == 1:
-#         return JsonResponse({'status': '0', 'message': 'Reservation deleted.'})
-#     elif res[0] == 0:
-#         return JsonResponse({'status': '-1', 'exception': 'Reservation does not exist.'})
-#
-#
-# def create(request):
-#     Reservation.objects.create_reservation(**request.GET.dict())
-# #     new_reservation = {}
-# #     request_dict = request.GET.dict()
-# #     for i in request_dict.keys():
-# #         if i in settings.FIELDS_TO_IGNORE:
-# #             continue
-# #         new_reservation[i] = request_dict[i]
-# #     if any(n not in new_reservation.keys() for n in ['firstname', 'lastname', 'datetime', 'hotelname', 'guestcount', 'phoneno']):
-# #         return JsonResponse({'status': '-1', 'exception': "Insufficient information entered. You need to supply a first/last name, date and time, the hotel name, the number of guests, and a phone number."})
-# #     # is_valid, err = Reservation.validate(new_reservation)
-# #     # if not is_valid:
-# #     #     return JsonResponse({'status': '-1', 'exception': err})
-# #     if Reservation.objects.filter(hotelname=new_reservation['hotelname'],
-# #                                   datetime=new_reservation['datetime']).count() > 0:
-# #         return JsonResponse({'status': '-1', 'exception': "This hotel is booked at {}.".format(new_reservation['datetime'])})
-# #     Reservation.objects.create(**new_reservation)
-# #     return ReservationJsonResponse(Reservation.objects.get(**new_reservation))
-#
-#
-# def state_change(request, reservation_id, state):
-#     res = Reservation.objects.get(id=reservation_id)
-#     check = res.change_state(int(state))
-#     if check == False:
-#         return JsonResponse({'status': '-1', 'exception': "You can only change status once a minute. Last changed: {}".format(res.status_last_changed_at)})
-#     return ReservationJsonResponse(res)
+    def list(self, request):
+        response = {}
+        for reservation in Reservation.objects.all():
+            response[reservation.id] = {
+                'firstname': reservation.firstname,
+                'lastname': reservation.lastname,
+                'phoneno': reservation.phoneno,
+                'datetime': reservation.datetime,
+                'guestcount': reservation.guestcount,
+                'hotelname': reservation.hotelname,
+                'status': reservation.status,
+                'status_last_changed_at': reservation.status_last_changed_at
+            }
+        return Response(response)
+
+    def create(self, request):
+        data = request.data.copy()
+        data['status_last_changed_at'] = datetime.datetime.now()
+        is_valid, errors = validate_reservation(request.data)
+        if not is_valid:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = serializers.ReservationSerializer(data = data)
+        if serializer.is_valid():
+            name = serializer.data.get('firstname')
+            res = Reservation.objects.create(**serializer.data)
+            return ReservationResponse(res)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        return ReservationResponse(Reservation.objects.get(id=pk))
+
+    def update(self, request, pk=None):
+        return self.partial_update(request, pk)
+
+    def partial_update(self, request, pk=None):
+        res = Reservation.objects.get(id=pk)
+        res_dict = res.__dict__
+        change_date_or_location = False
+        Serializer = serializers.ExistingReservationSerializer
+        for key, value in request.data.iteritems():
+            if value == '': continue
+            res_dict[key] = value
+            if key in ['datetime','hotelname']:
+                change_date_or_location = True
+        if change_date_or_location:
+            Serializer = serializers.ReservationSerializer
+        del res_dict['_state']
+        del res_dict['status']
+        is_valid, errors = validate_reservation(res_dict)
+        if not is_valid:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = Serializer(data = res_dict)
+        if serializer.is_valid():
+            Reservation.objects.filter(id=pk).update(**res_dict)
+            return ReservationResponse(Reservation.objects.get(id=pk))
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        Reservation.objects.filter(id=pk).delete()
+        return Response({'http_method': 'DELETE'})
